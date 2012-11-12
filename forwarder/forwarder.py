@@ -83,5 +83,10 @@ def start_server(addr, ipv6=False):
         ff.start()
 
 if __name__ == '__main__':
+    try:
+        port = int(sys.argv[1])
+    except:
+        port = 9999
+    print('listen on: ', port)
     read_proxys('proxy.conf')
-    start_server(('localhost', 9999))
+    start_server(('localhost', port))
