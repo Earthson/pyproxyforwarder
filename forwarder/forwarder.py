@@ -14,7 +14,10 @@ def read_proxys(filename):
     addrs = [each.split(':') for each in ff if each[0] != '#']
     for i in range(40):
         for each in addrs:
-            proxyinfo = socket.getaddrinfo(each[0], int(each[1]))
+            try:
+                proxyinfo = socket.getaddrinfo(each[0], int(each[1]))
+            except:
+                continue
             if not proxyinfo:
                 continue
             proxy_queue.put(proxyinfo[0])
