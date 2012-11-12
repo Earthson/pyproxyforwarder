@@ -4,10 +4,12 @@ import sys
 import socket
 from threading import Thread
 from queue import Queue
+from time import sleep
 
 proxy_queue = Queue()
 
-_conn_timeout = 7
+socket.setdefaulttimeout(5)
+#socket.setblocking(True)
 
 def read_proxys(filename):
     ff = open(filename, 'r')
@@ -35,19 +37,20 @@ def data_forward_func(conn0, conn1):
     def func():
         try:
             while True:
-                data = conn0.recv(1024)
+                data = conn0.recv(65536)
                 conn1.send(data)
+                if not data:
+                    break
         except socket.error as e:
-            print(e, file=sys.stderr)
+            print('$$$#', e, file=sys.stderr)
         except IOError as e:
-            print('##', e, file=sys.stderr)
+            print('$$$#', e, file=sys.stderr)
     return func
 
 def try_connect(addrinfo):
-    global _conn_timeout
     print('#connect to:', addrinfo)
     s = socket.socket(family=addrinfo[0], type=addrinfo[1], proto=addrinfo[2])
-    s.settimeout(_conn_timeout)
+    #s.setblocking(False)
     s.connect(addrinfo[4])
     return s
 
@@ -64,8 +67,11 @@ def start_forwarder(conn, addr):
     t2 = Thread(target=data_forward_func(s, conn))
     t1.start()
     t2.start()
-    t1.join()
-    t2.join()
+    while True:
+        if t1.is_alive() and t2.is_alive():
+            sleep(0.5)
+        else:
+            break
     try:
         s.close()
         conn.close()
@@ -76,14 +82,14 @@ def start_forwarder(conn, addr):
     return True
 
 def start_server(addr, ipv6=False):
-    global _conn_timeout
     sock_s = socket.socket(socket.AF_INET if not ipv6 else socket.AF_INET6, 
                 socket.SOCK_STREAM)
+    sock_s.settimeout(None)
     sock_s.bind(addr)
     sock_s.listen(128)
     while True:
         conn, addr = sock_s.accept()
-        conn.settimeout(_conn_timeout)
+        #conn.setblocking(False)
         ff = Thread(target=lambda:start_forwarder(conn, addr))
         ff.setDaemon(True)
         ff.start()
