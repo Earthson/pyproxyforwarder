@@ -7,7 +7,7 @@ from queue import Queue
 
 proxy_queue = Queue()
 
-_conn_timeout = 10
+_conn_timeout = 7
 
 def read_proxys(filename):
     ff = open(filename, 'r')
@@ -65,6 +65,11 @@ def start_forwarder(conn, addr):
     t2.start()
     t1.join()
     t2.join()
+    try:
+        s.close()
+        conn.close()
+    except Exception as e:
+        print('#close error: ', e)
     print('##conn end')
     return_proxy(proxy_addr)
     return True
