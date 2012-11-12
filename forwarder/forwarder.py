@@ -29,6 +29,7 @@ def random_proxy():
 
 def return_proxy(addr):
     proxy_queue.put(addr)
+    print('#current proxy pool', proxy_queue.qsize())
 
 def data_forward_func(conn0, conn1):
     def func():
