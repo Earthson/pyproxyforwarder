@@ -8,13 +8,13 @@ from time import sleep
 
 proxy_queue = Queue()
 
-socket.setdefaulttimeout(5)
+socket.setdefaulttimeout(70)
 #socket.setblocking(True)
 
 def read_proxys(filename):
     ff = open(filename, 'r')
     addrs = [each.split(':') for each in ff if each[0] != '#']
-    for i in range(40):
+    for i in range(4):
         for each in addrs:
             try:
                 proxyinfo = socket.getaddrinfo(each[0], int(each[1]))
@@ -37,14 +37,21 @@ def data_forward_func(conn0, conn1):
     def func():
         try:
             while True:
-                data = conn0.recv(65536)
-                conn1.send(data)
+                data = conn0.recv(4096)
                 if not data:
                     break
+                totalsent = 0
+                while totalsent < len(data):
+                    sent = conn1.send(data[totalsent:])
+                    if sent == 0:
+                        raise RuntimeError("## socket connection broken")
+                    totalsent += sent
         except socket.error as e:
             print('$$$#', e, file=sys.stderr)
         except IOError as e:
             print('$$$#', e, file=sys.stderr)
+        except Exception as e:
+            print(e)
     return func
 
 def try_connect(addrinfo):
@@ -60,8 +67,12 @@ def start_forwarder(conn, addr):
         s = try_connect(proxy_addr)
     except:
         print('#conn faild')
-        return_proxy(proxy_addr)
-        return False
+        sleep(0.1)
+        try:
+            s = try_connect(proxy_add)
+        except:
+            #return_proxy(proxy_addr)
+            return False
     print('#conn start')
     t1 = Thread(target=data_forward_func(conn, s))
     t2 = Thread(target=data_forward_func(s, conn))
@@ -86,7 +97,7 @@ def start_server(addr, ipv6=False):
                 socket.SOCK_STREAM)
     sock_s.settimeout(None)
     sock_s.bind(addr)
-    sock_s.listen(128)
+    sock_s.listen(256)
     while True:
         conn, addr = sock_s.accept()
         #conn.setblocking(False)
